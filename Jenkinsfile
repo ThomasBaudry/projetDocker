@@ -18,13 +18,13 @@ pipeline {
 
     stage('Compilation') {
       steps {
-        sh './build.sh' // ou npm build, ou autre selon ton projet
+        sh './build.sh'
       }
     }
 
     stage('Tests') {
       steps {
-        sh './test.sh' // ou npm test, ou autre
+        sh './test.sh'
       }
     }
 
@@ -51,8 +51,8 @@ pipeline {
       steps {
         sshagent(['id-cle-ssh-ou-token']) {
           sh """
-            git config user.name "jenkins"
-            git config user.email "jenkins@local"
+            git config user.name "Thomas Baudry"
+            git config user.email "thomasbaudry05@gmail.com"
             git tag ${VERSION}
             git push origin ${VERSION}
           """

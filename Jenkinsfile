@@ -9,7 +9,7 @@ pipeline {
     }
 
     stages {
-        stage('Install & Build') {
+        stage('Install & Build ') {
             steps {
                 sh 'npm install'
                 sh 'npm run build || echo "skip if no build script"'

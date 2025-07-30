@@ -34,7 +34,7 @@ stage('Build Docker Image') {
 
         stage('Tag GitHub Repo') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'ghcr', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                     sh '''
                         git config user.name "CI Bot"
                         git config user.email "ci@example.com"

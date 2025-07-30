@@ -9,28 +9,6 @@ pipeline {
     }
 
     stages {
-
-        stage('Check Git Installation') {
-            steps {
-                sh 'git --version || echo "Git n\'est pas installé sur ce nœud."'
-            }
-        }
-
-        stage('Clone Repository') {
-            steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/master']],
-                    userRemoteConfigs: [[
-                        url: "${REPO_URL}",
-                        credentialsId: 'github-token'
-                    ]]
-                ])
-                echo "Code cloned successfully"
-            }
-        }
-
-
         stage('Install & Build') {
             steps {
                 sh 'npm install'

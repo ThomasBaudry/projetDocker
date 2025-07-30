@@ -11,16 +11,23 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git url: "${REPO_URL}", branch: 'master', credentialsId: 'github-token'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/master']],
+                    userRemoteConfigs: [[
+                        url: "${REPO_URL}",
+                        credentialsId: 'github-token'
+                    ]]
+                ])
                 echo "Code cloned successfully"
             }
         }
 
+
         stage('Install & Build') {
             steps {
-                 'npm install'
-                 'npm run build || echo "skip if no build script"'
-                }
+                sh 'npm install'
+                sh 'npm run build || echo "skip if no build script"'
             }
         }
 

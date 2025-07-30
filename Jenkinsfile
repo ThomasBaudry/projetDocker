@@ -1,72 +1,87 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    GITHUB_USER = 'Thomas Baudry'
-    IMAGE_NAME = 'jenkins-pipelines'
-    VERSION = "v${env.BUILD_NUMBER}"
-    TOKEN = "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"
-    DOCKER_REGISTRY = "ghcr.io/${env.GITHUB_USER}/${env.IMAGE_NAME}"
-  }
-
-  stages {
-    stage('Cloner le repo') {
-      steps {
-        git url: 'git@github.com:ThomasBaudry/projetDocker.git', credentialsId: 'github-token'
-      }
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('github-token')
     }
 
-    stage('Compilation') {
-      steps {
-        sh './build.sh'
-      }
-    }
-
-    stage('Tests') {
-      steps {
-        sh './test.sh'
-      }
-    }
-
-    stage('Créer image Docker') {
-      steps {
-        script {
-          sh "docker build -t ${DOCKER_REGISTRY}:${VERSION} ."
+    stages {
+        stage('Checkout') {
+            steps {
+                echo "Cloning repository..."
+                checkout scm
+                echo "Code checked out"
+            }
         }
-      }
-    }
 
-    stage('Push image GitHub Packages') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'Thomas Baudry', passwordVariable: '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')]) {
-          sh """
-            echo "${TOKEN}" | docker login ghcr.io -u "${USERNAME}" --password-stdin
-            docker push ${DOCKER_REGISTRY}:${VERSION}
-          """
+        stage('Run tests - Frontend') {
+            steps {
+                echo "Running frontend tests in isolated container"
+                sh '''
+                    docker rm -f test-frontend || true
+                    docker create --name test-frontend node:20 sh -c 'cd /app && npm install && npm test'
+                    docker cp ./frontend/. test-frontend:/app
+                    docker start -a test-frontend
+                    docker rm test-frontend
+                    echo "Tests completed successfully"
+                '''
+            }
         }
-      }
-    }
 
-    stage('Tag Git') {
-      steps {
-        sshagent(['id-cle-ssh-ou-token']) {
-          sh """
-            git config user.name "Thomas Baudry"
-            git config user.email "thomasbaudry05@gmail.com"
-            git tag ${VERSION}
-            git push origin ${VERSION}
-          """
+
+        stage('Build Docker Image') {
+            steps {
+                echo "Building frontend Docker image"
+                sh '''
+                    docker build -t ThomasBaudry/projetDocker:latest ./frontend
+                    echo "Docker image built"
+                '''
+            }
         }
-      }
-    }
-  }
+/*
+        stage('Push to GitHub Packages') {
+            steps {
+                echo "Pushing Docker image to GitHub Packages"
+                script {
+                    def versionTag = "v1.0.${env.BUILD_NUMBER}"
+                    sh """
+                        echo \"${DOCKERHUB_CREDENTIALS_PSW}\" | docker login ghcr.io -u \"${DOCKERHUB_CREDENTIALS_USR}\" --password-stdin
 
-  post {
-    success {
-      echo "Pipeline réussi - version ${VERSION} publiée."
+                        docker tag ThomasBaudry/projetDocker:latest ghcr.io/lhenryaxel/todolist-frontend:latest
+                        docker tag ThomasBaudry/projetDocker:latest ghcr.io/lhenryaxel/todolist-frontend:${versionTag}
+
+                        docker push ghcr.io/lhenryaxel/todolist-frontend:latest
+                        docker push ghcr.io/lhenryaxel/todolist-frontend:${versionTag}
+                    """
+
+                }
+            }
+        }
+
+        stage('Tag Git repo') {
+            steps {
+                echo "Tagging GitHub repository with version number"
+                withCredentials([usernamePassword(credentialsId: 'ghcr-token', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                    sh '''
+                        git config user.email "ci@todo.com"
+                        git config user.name "CI Bot"
+                        VERSION_TAG="v1.0.${BUILD_NUMBER}"
+                        git tag -a $VERSION_TAG -m "Build $BUILD_NUMBER"
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/LhenryAxel/todolist.git --tags
+                        echo "Repository tagged with $VERSION_TAG"
+                    '''
+                }
+            }
+        }
     }
-    failure {
-      echo "Pipeline échoué."
+*/
+    post {
+        always {
+            echo "Cleaning up workspace"
+            cleanWs()
+        }
+        failure {
+            echo "Build failed"
+        }
     }
-  }
 }

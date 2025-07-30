@@ -9,6 +9,13 @@ pipeline {
     }
 
     stages {
+
+        stage('Check Git Installation') {
+            steps {
+                sh 'git --version || echo "Git n\'est pas installé sur ce nœud."'
+            }
+        }
+
         stage('Clone Repository') {
             steps {
                 checkout([
